@@ -1,0 +1,88 @@
+# ==============================================================================
+# Object Files, Libraries, and Generated Dependencies
+# ==============================================================================
+*.o
+*.obj
+*.d
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# ==============================================================================
+# Compiled Output and Firmware Binaries
+# ==============================================================================
+*.elf
+*.bin
+*.hex
+*.out
+*.map
+*.lst
+*.axf
+*.s19
+
+# ==============================================================================
+# Build Directories
+# ==============================================================================
+build/
+bin/
+out/
+[Db]ebug/
+[Rr]elease/
+cmake-build-*/
+
+# ==============================================================================
+# Build System Artifacts
+# ==============================================================================
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt.user
+cmake_install.cmake
+Makefile
+*.ninja
+
+# ==============================================================================
+# IDE & Editor Configuration
+# ==============================================================================
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.code-workspace
+
+# CLion / JetBrains
+.idea/
+
+# Keil MDK / IAR Embedded Workbench
+*.uvgui.*
+*.uvopt*
+*.dep
+*.eww
+
+# Eclipse / STM32CubeIDE
+.project
+.cproject
+.settings/
+
+# Visual Studio
+.vs/
+*.user
+
+# ==============================================================================
+# OS / Temporary Files
+# ==============================================================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# IDE & Editor Configuration
+.vscode/
+*.code-workspace
+
+# Build / System Configuration
+sdkconfig
+sdkconfig.old
+sdkconfig.ci
