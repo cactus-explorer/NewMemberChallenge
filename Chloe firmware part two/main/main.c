@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <time.h>
 #include <ecrt.h>
 
 // Ethercat definitions
@@ -18,7 +20,7 @@
 
 /* Enable Sequence Controlword Commands */
 #define EC_CMD_SHUTDOWN                0x0006  /* Step 1: Write Shutdown */
-#define EC_CMD_SWITCH_ON z              0x0007  /* Step 2: Write Switch On */
+#define EC_CMD_SWITCH_ON               0x0007  /* Step 2: Write Switch On */
 #define EC_CMD_ENABLE_OPERATION        0x000F  /* Step 3: Write Enable Operation */
 
 /* Statusword State Verification Values & Mask */
@@ -27,75 +29,82 @@
 #define EC_STATUS_SWITCHED_ON          0x0233  /* Expected state after Switch On command */
 #define EC_STATUS_OPERATION_ENABLED    0x0237  /* Expected state after Enable Operation command */
 
-#define printFrequency 3;
+#define PRINT_FREQ 3
 
-void app_main(void)
+#define VENDOR_ID      0x00000000
+#define PRODUCT_CODE   0x00000000
+
+int main(void)
 {
-    printf("Hello world!\n");
+    // Declare variables mapped to PDO entries
+    uint16_t controlword = 0;
+    uint16_t statusword = 0;
+    uint32_t errorcode = 0;
+    int8_t modeofoperation = 0;
+    int32_t velocityactualvalue = 0;
+    uint16_t maxtorque = 0;
+    int32_t target_velocity = 0;
 
-    ecrt_request_master();
-    ecrt_master_create_domain();
-    ecrt_master_slave_config();
+    unsigned int off_controlword;
+    unsigned int off_statusword;
+    unsigned int off_errorcode;
+    unsigned int off_modeofoperation;
+    unsigned int off_velocityactualvalue;
+    unsigned int off_maxtorque;
+    unsigned int off_target_velocity;
+
+    ec_master_t *master = NULL;
+    ec_domain_t *domain = NULL;
+    ec_slave_config_t *sc = NULL;
+
+    master = ecrt_request_master(0);
+    domain = ecrt_master_create_domain(master);
+    sc = ecrt_master_slave_config(master, 0, 0, VENDOR_ID, PRODUCT_CODE);
+
+
     ec_pdo_entry_reg_t domain_regs[] = {
-        {0, EC_OD_CONTROLWORD, 0, &controlword},
-        {0, EC_OD_STATUSWORD, 0, &statusword},
-        {0, EC_OD_ERROR_CODE, 0, &errorcode},
-        {0, EC_OD_MODES_OF_OPERATION, 0, &modeofoperation},
-        {0, EC_OD_VELOCITY_ACTUAL_VALUE, 0, &velocityactualvalue},
-        {0, EC_OD_MAX_TORQUE, 0, &maxtorque},
-        {0, EC_OD_TARGET_VELOCITY, 0, &targetvelocity},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_CONTROLWORD, 0, &off_controlword},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_STATUSWORD, 0, &off_statusword},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_ERROR_CODE, 0, &off_errorcode},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_MODES_OF_OPERATION, 0, &off_modeofoperation},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_VELOCITY_ACTUAL_VALUE, 0, &off_velocityactualvalue},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_MAX_TORQUE, 0, &off_maxtorque},
+        {0, 0, VENDOR_ID, PRODUCT_CODE, EC_OD_TARGET_VELOCITY, 0, &off_target_velocity},
         {}
     };
-    ecrt_domain_reg_pdo_entry_list(domain_regs);
-    ecrt_master_activate();
-    ecrt_domain_data(domain_regs);
+
+    ecrt_master_activate(master);
 
     int cycle = 0;
-    int status;
-    int control;
-    int elapsed_time = 0;
+    
     while (1) {
-        elapsed_time += 1; // Assuming 1 second per cycle
-
         clock_nanosleep(CLOCK_MONOTONIC, 0, &(struct timespec){.tv_sec = 1}, NULL);
-        ecrt_master_receive();
-        ecrt_domain_process();
-        status = ecrt_master_state();
-        control = ecrt_master_control();
-        if ((status & EC_STATUS_MASK) == EC_STATUS_READY_TO_SWITCH_ON) {
-            control = EC_CMD_SHUTDOWN;
-        } else if ((status & EC_STATUS_MASK) == EC_STATUS_SWITCHED_ON) {
-            control = EC_CMD_ENABLE_OPERATION;
-        } else if ((status & EC_STATUS_MASK) == EC_STATUS_OPERATION_ENABLED) {
-            // Already in operation enabled state, maintain current controlword
+        
+        if ((statusword & EC_STATUS_MASK) == EC_STATUS_READY_TO_SWITCH_ON) {
+            controlword = EC_CMD_SHUTDOWN;
+        } else if ((statusword & EC_STATUS_MASK) == EC_STATUS_SWITCHED_ON) {
+            controlword = EC_CMD_ENABLE_OPERATION;
+        } else if ((statusword & EC_STATUS_MASK) == EC_STATUS_OPERATION_ENABLED) {
+            // Operational state maintained
         } else {
-            // Handle unexpected status
-            printf("Unexpected status: 0x%04X\n", status);
+            printf("Unexpected status: 0x%04X\n", statusword);
         }
-        ecrt_master_write(EC_OD_MODES_OF_OPERATION, EC_MODE_CSV);
-        if ((status & EC_STATUS_MASK) == EC_STATUS_OPERATION_ENABLED) {
-            ecrt_master_write(EC_OD_TARGET_VELOCITY, 1000);
+
+        modeofoperation = EC_MODE_CSV;
+        maxtorque = EC_MAX_TORQUE_TEST_LIMIT;
+
+        // Use cycle modulo 6 to repeat a 6-second pattern
+        if ((cycle % 6) < 3) {
+            target_velocity = (int32_t)(60 / 60.0 * 131072); // 60 RPM
+        } else {
+            target_velocity = 0;
         }
-        ecrt_domain_queue();
-        ecrt_master_send();
-        if (cycle % printFrequency == 0) {
+
+        if (cycle % PRINT_FREQ == 0) {
             printf("Statusword: 0x%04X\n", statusword);
             printf("Velocity Actual: %d\n", velocityactualvalue);
         }
-        ecrt_master_write(EC_OD_MODES_OF_OPERATION, EC_MODE_CSV);
-        ecrt_master_write(EC_OD_MAX_TORQUE, EC_MAX_TORQUE_TEST_LIMIT);
-        target_velocity = rpm / 60.0 * 131072;
-        // Start with 60 RPM
-        if (elapsed_time <= 3) {
-            target_velocity = 60 / 60.0 * 131072; // 60 RPM
-        } else if (elapsed_time >= 3)
-        {
-            target_velocity = 0 / 60.0 * 131072;
-        }
-        while (elapsed_time >= 6) {
-            elapsed_time = 0; // Reset elapsed time after 6 seconds
-        }
-        ecrt_master_write(EC_OD_TARGET_VELOCITY, target_velocity);
+
         cycle++;
     }
 }
