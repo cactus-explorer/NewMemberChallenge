@@ -53,7 +53,10 @@ void app_main(void)
     int cycle = 0;
     int status;
     int control;
+    int elapsed_time = 0;
     while (1) {
+        elapsed_time += 1; // Assuming 1 second per cycle
+
         clock_nanosleep(CLOCK_MONOTONIC, 0, &(struct timespec){.tv_sec = 1}, NULL);
         ecrt_master_receive();
         ecrt_domain_process();
@@ -81,6 +84,18 @@ void app_main(void)
         }
         ecrt_master_write(EC_OD_MODES_OF_OPERATION, EC_MODE_CSV);
         ecrt_master_write(EC_OD_MAX_TORQUE, EC_MAX_TORQUE_TEST_LIMIT);
+        target_velocity = rpm / 60.0 * 131072;
+        // Start with 60 RPM
+        if (elapsed_time <= 3) {
+            target_velocity = 60 / 60.0 * 131072; // 60 RPM
+        } else if (elapsed_time >= 3)
+        {
+            target_velocity = 0 / 60.0 * 131072;
+        }
+        while (elapsed_time >= 6) {
+            elapsed_time = 0; // Reset elapsed time after 6 seconds
+        }
+        ecrt_master_write(EC_OD_TARGET_VELOCITY, target_velocity);
         cycle++;
     }
 }
