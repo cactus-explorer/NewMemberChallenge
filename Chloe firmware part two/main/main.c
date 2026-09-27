@@ -1,11 +1,6 @@
 #include <stdint.h>
 #include <ecrt.h>
 
-// Blink LED includes
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
-
 // Ethercat definitions
 /* EtherCAT CiA 402 Object Dictionary Indexes */
 #define EC_OD_CONTROLWORD              0x6040
@@ -23,7 +18,7 @@
 
 /* Enable Sequence Controlword Commands */
 #define EC_CMD_SHUTDOWN                0x0006  /* Step 1: Write Shutdown */
-#define EC_CMD_SWITCH_ON               0x0007  /* Step 2: Write Switch On */
+#define EC_CMD_SWITCH_ON z              0x0007  /* Step 2: Write Switch On */
 #define EC_CMD_ENABLE_OPERATION        0x000F  /* Step 3: Write Enable Operation */
 
 /* Statusword State Verification Values & Mask */
