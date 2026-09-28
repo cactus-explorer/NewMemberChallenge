@@ -26,13 +26,13 @@
 
 /* Statusword State Verification Values & Mask */
 #define EC_STATUS_MASK                 0x006F  /* Mask for statusword evaluation (& 0x006F) */
-#define EC_STATUS_READY_TO_SWITCH_ON   0x0231  /* Expected state after Shutdown command */
-#define EC_STATUS_SWITCHED_ON          0x0233  /* Expected state after Switch On command */
-#define EC_STATUS_OPERATION_ENABLED    0x0237  /* Expected state after Enable Operation command */
+#define EC_STATUS_READY_TO_SWITCH_ON   0x0021  /* was 0x0231 */
+#define EC_STATUS_SWITCHED_ON          0x0023  /* was 0x0233 */
+#define EC_STATUS_OPERATION_ENABLED    0x0027  /* Expected state after Enable Operation command */
 
 #define PRINT_FREQ 1000 // Print output every 1000 cycles (1 second at 1kHz)
 
-#define VENDOR_ID      0x00000000
+#define VENDOR_ID      0x00202008
 #define PRODUCT_CODE   0x00000000
 
 int main(void)
@@ -40,7 +40,7 @@ int main(void)
     // Declare variables mapped to PDO entries
     uint16_t controlword = 0;
     uint16_t statusword = 0;
-    uint32_t errorcode = 0;
+    uint16_t errorcode = 0;
     int8_t modeofoperation = 0;
     int32_t velocityactualvalue = 0;
     uint16_t maxtorque = 0;
@@ -116,7 +116,7 @@ int main(void)
 
         // Read feedback from process data
         statusword = EC_READ_U16(domain_pd + off_statusword);
-        errorcode = EC_READ_U32(domain_pd + off_errorcode);
+        errorcode = EC_READ_U16(domain_pd + off_errorcode);
         velocityactualvalue = EC_READ_S32(domain_pd + off_velocityactualvalue);
 
         // CiA 402 State Machine Sequence Management
@@ -189,7 +189,7 @@ int main(void)
 
         if (cycle % PRINT_FREQ == 0) {
             printf("Statusword: 0x%04X | Velocity Actual: %d | Target Velocity: %d\n", 
-                   statusword, velocityactualvalue, target_velocity);
+                   (statusword & EC_STATUS_MASK), velocityactualvalue, target_velocity);
         }
 
         cycle++;
